@@ -1,3 +1,33 @@
 /*
     You can add your own custom styles here.
 */
+@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-lite-webfont@1.1.0/style.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/cascadia-code@4.2.1/index.min.css');
+//修改文章字体和代码字体
+:root {
+    --zh-font-family: 'LXGW WenKai Lite';
+    --base-font-family: var(--zh-font-family), sans-serif;
+    --code-font-family: 'Cascadia Code', var(--zh-font-family), monospace;
+}
+//修改滚动条样式
+* {
+    scrollbar-width: thin;
+}
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+//修改目录间距
+.widget--toc {
+    #TableOfContents {
+        li {
+            margin: 2px 0 2px 4px;
+            padding: 3px;
+            & > ul {
+                margin-top: 2px;
+                margin-bottom: -2px;
+            }
+        }
+    }
+}
