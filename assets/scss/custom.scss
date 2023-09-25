@@ -31,3 +31,60 @@
         }
     }
 }
+
+.article-list {
+
+    article {
+        
+    .article-header {
+            display: flex;
+        }
+      .article-image {
+        width: 38.2%;
+        img {
+          display: block;  
+          width: 100%;
+        }
+      }
+    }
+    
+  }
+
+.article-list--compact {
+    --image-size: 60px;
+    @include respond(md) {
+      --image-size: 60px;
+    }
+    article {
+      .article-image {
+        img {
+          height: var(--image-size);
+          object-fit: cover;
+          border-radius: var(--card-border-radius);
+        }
+      }
+    }
+  }
+
+  .article-page {
+    .main-article {
+      .article-header {
+        .article-image {
+          img {
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+//调整文章详情页底部的相关文章列表的封面图片大小
+  .related-content {
+    article {
+      width: 228px;
+      height: 62.5px;
+      
+      .article-title {
+        font-size: 1.6rem;
+      }
+    }
+  }  
