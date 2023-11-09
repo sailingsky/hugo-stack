@@ -2,7 +2,7 @@
 title: "斐波那契数列解法"
 description: 
 date: 2023-09-25T10:52:14+08:00
-image: pexels-google-deepmind-18069816.jpg
+image: post/algorithm/pexels-google-deepmind-18069816.jpg
 math: 
 license: 
 hidden: false
