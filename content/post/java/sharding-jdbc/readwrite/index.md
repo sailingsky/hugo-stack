@@ -2,7 +2,7 @@
 title: "Sharding Jdbc实现读写分离+水平分片"
 description: 
 date: 2024-01-09T21:14:46+08:00
-image: pexels-google-deepmind-17483874.jpg
+image: post/java/sharding-jdbc/pexels-google-deepmind-17483874.jpg
 math: 
 license: 
 hidden: false
