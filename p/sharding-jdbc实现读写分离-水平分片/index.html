@@ -1,0 +1,607 @@
+<!doctype html><html lang=zh-cn dir=ltr><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><meta name=description content="日常系统开发中，经常涉及到大数据量的业务，常见的如商城系统，规模上去后，单表会经常上千万甚至上亿。仅仅靠单表肯定是无法支撑系统的规模及性能，因此诞生了分库分表的解决方案。首先，为了保证高可用，会增加主从库备份；再者为了高性能，会利用主从库进行读写分离；为了高容量，会进行分库分表。\n"><title>Sharding Jdbc实现读写分离+水平分片</title>
+<link rel=canonical href=https://sailingsky.github.io/p/sharding-jdbc%E5%AE%9E%E7%8E%B0%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB-%E6%B0%B4%E5%B9%B3%E5%88%86%E7%89%87/><link rel=stylesheet href=/scss/style.min.d2f78c050d4403894c816f76b3019538f3efed9edad5eb96bf29b6b27b04d65b.css><meta property='og:title' content="Sharding Jdbc实现读写分离+水平分片"><meta property='og:description' content="日常系统开发中，经常涉及到大数据量的业务，常见的如商城系统，规模上去后，单表会经常上千万甚至上亿。仅仅靠单表肯定是无法支撑系统的规模及性能，因此诞生了分库分表的解决方案。首先，为了保证高可用，会增加主从库备份；再者为了高性能，会利用主从库进行读写分离；为了高容量，会进行分库分表。\n"><meta property='og:url' content='https://sailingsky.github.io/p/sharding-jdbc%E5%AE%9E%E7%8E%B0%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB-%E6%B0%B4%E5%B9%B3%E5%88%86%E7%89%87/'><meta property='og:site_name' content='码文'><meta property='og:type' content='article'><meta property='article:section' content='Post'><meta property='article:tag' content='java'><meta property='article:tag' content='sharding-jdbc'><meta property='article:published_time' content='2024-01-09T21:14:46+08:00'><meta property='article:modified_time' content='2024-01-09T21:14:46+08:00'><meta property='og:image' content='https://sailingsky.github.io/post/java/sharding-jdbc/pexels-google-deepmind-17483874.jpg'><meta name=twitter:title content="Sharding Jdbc实现读写分离+水平分片"><meta name=twitter:description content="日常系统开发中，经常涉及到大数据量的业务，常见的如商城系统，规模上去后，单表会经常上千万甚至上亿。仅仅靠单表肯定是无法支撑系统的规模及性能，因此诞生了分库分表的解决方案。首先，为了保证高可用，会增加主从库备份；再者为了高性能，会利用主从库进行读写分离；为了高容量，会进行分库分表。\n"><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content='https://sailingsky.github.io/post/java/sharding-jdbc/pexels-google-deepmind-17483874.jpg'><link rel="shortcut icon" href=/favicon.png><script async src="https://www.googletagmanager.com/gtag/js?id=G-545H77K2T7"></script><script>var dnt,doNotTrack=!1;if(!1&&(dnt=navigator.doNotTrack||window.doNotTrack||navigator.msDoNotTrack,doNotTrack=dnt=="1"||dnt=="yes"),!doNotTrack){window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","G-545H77K2T7")}</script></head><body class=article-page><script>(function(){const e="StackColorScheme";localStorage.getItem(e)||localStorage.setItem(e,"auto")})()</script><script>(function(){const t="StackColorScheme",e=localStorage.getItem(t),n=window.matchMedia("(prefers-color-scheme: dark)").matches===!0;e=="dark"||e==="auto"&&n?document.documentElement.dataset.scheme="dark":document.documentElement.dataset.scheme="light"})()</script><div class="container main-container flex on-phone--column extended"><aside class="sidebar left-sidebar sticky"><button class="hamburger hamburger--spin" type=button id=toggle-menu aria-label=切换菜单>
+<span class=hamburger-box><span class=hamburger-inner></span></span></button><header><figure class=site-avatar><a href=/><img src=/img/avatar_hu897059592634026878.png width=300 height=300 class=site-logo loading=lazy alt=Avatar>
+</a><span class=emoji>🍥</span></figure><div class=site-meta><h1 class=site-name><a href=/>码文</a></h1><h2 class=site-description>学海本无涯，惟勤是岸</h2></div></header><ol class=menu-social><li><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank title=GitHub rel=me><svg class="icon icon-tabler icon-tabler-brand-github" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6.0 00-1.3-3.2 4.2 4.2.0 00-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3.0 00-6.2.0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2.0 00-.1 3.2A4.6 4.6.0 004 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></a></li><li><a href=https://twitter.com target=_blank title=Twitter rel=me><svg class="icon icon-tabler icon-tabler-brand-twitter" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M22 4.01c-1 .49-1.98.689-3 .99-1.121-1.265-2.783-1.335-4.38-.737S11.977 6.323 12 8v1c-3.245.083-6.135-1.395-8-4 0 0-4.182 7.433 4 11-1.872 1.247-3.739 2.088-6 2 3.308 1.803 6.913 2.423 10.034 1.517 3.58-1.04 6.522-3.723 7.651-7.742a13.84 13.84.0 00.497-3.753C20.18 7.773 21.692 5.25 22 4.009z"/></svg></a></li></ol><ol class=menu id=main-menu><li><a href=/><svg class="icon icon-tabler icon-tabler-home" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><polyline points="5 12 3 12 12 3 21 12 19 12"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/><path d="M9 21v-6a2 2 0 012-2h2a2 2 0 012 2v6"/></svg>
+<span>主页</span></a></li><li><a href=/archives/><svg class="icon icon-tabler icon-tabler-archive" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><rect x="3" y="4" width="18" height="4" rx="2"/><path d="M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+<span>归档</span></a></li><li><a href=/search/><svg class="icon icon-tabler icon-tabler-search" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+<span>搜索</span></a></li><li><a href=/%E9%93%BE%E6%8E%A5/><svg class="icon icon-tabler icon-tabler-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M10 14a3.5 3.5.0 005 0l4-4a3.5 3.5.0 00-5-5l-.5.5"/><path d="M14 10a3.5 3.5.0 00-5 0l-4 4a3.5 3.5.0 005 5l.5-.5"/></svg>
+<span>链接</span></a></li><li class=menu-bottom-section><ol class=menu><li id=dark-mode-toggle><svg class="icon icon-tabler icon-tabler-toggle-left" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="8" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<svg class="icon icon-tabler icon-tabler-toggle-right" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="16" cy="12" r="2"/><rect x="2" y="6" width="20" height="12" rx="6"/></svg>
+<span>暗色模式</span></li></ol></li></ol></aside><aside class="sidebar right-sidebar sticky"><section class="widget archives"><div class=widget-icon><svg class="icon icon-tabler icon-tabler-hash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="5" y1="15" x2="19" y2="15"/><line x1="11" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="13" y2="20"/></svg></div><h2 class="widget-title section-title">目录</h2><div class=widget--toc><nav id=TableOfContents><ol><li><ol><li><a href=#整体架构图>整体架构图：</a></li><li><a href=#mysql高可用集群搭建>mysql高可用集群搭建</a><ol><li><a href=#主mysql搭建>主mysql搭建</a></li><li><a href=#从服务器搭建>从服务器搭建</a></li><li><a href=#slave启动主从同步>slave启动主从同步</a></li></ol></li><li><a href=#springboot配置>SpringBoot配置</a></li></ol></li></ol></nav></div></section></aside><main class="main full-width"><article class="has-image main-article"><header class=article-header><div class=article-image><a href=/p/sharding-jdbc%E5%AE%9E%E7%8E%B0%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB-%E6%B0%B4%E5%B9%B3%E5%88%86%E7%89%87/><img src=/post/java/sharding-jdbc/pexels-google-deepmind-17483874.jpg loading=lazy alt="Featured image of post Sharding Jdbc实现读写分离+水平分片"></a></div><div class=article-details><header class=article-category><a href=/categories/sharding-jdbc/>Sharding-Jdbc</a></header><div class=article-title-wrapper><h2 class=article-title><a href=/p/sharding-jdbc%E5%AE%9E%E7%8E%B0%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB-%E6%B0%B4%E5%B9%B3%E5%88%86%E7%89%87/>Sharding Jdbc实现读写分离+水平分片</a></h2></div><footer class=article-time><div><svg class="icon icon-tabler icon-tabler-calendar-time" width="56" height="56" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><path d="M11.795 21H5a2 2 0 01-2-2V7a2 2 0 012-2h12a2 2 0 012 2v4"/><circle cx="18" cy="18" r="4"/><path d="M15 3v4"/><path d="M7 3v4"/><path d="M3 11h16"/><path d="M18 16.496V18l1 1"/></svg>
+<time class=article-time--published>2024/01/09</time></div><div><svg class="icon icon-tabler icon-tabler-clock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+<time class=article-time--reading>阅读时长: 4 分钟</time></div></footer></div></header><section class=article-content><p>日常系统开发中，经常涉及到大数据量的业务，常见的如商城系统，规模上去后，单表会经常上千万甚至上亿。仅仅靠单表肯定是无法支撑系统的规模及性能，因此诞生了分库分表的解决方案。首先，为了保证高可用，会增加主从库备份；再者为了高性能，会利用主从库进行读写分离；为了高容量，会进行分库分表。</p><h3 id=整体架构图>整体架构图：</h3><p><img src=https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202401092147218.png loading=lazy alt=image-20240109214707106></p><p><code>master0</code>和<code>master1</code>同为写库，用于数据分片，增加数据容量。<code>slave0</code>和<code>slave1</code>为从库，提供查询能力，分担查询压力，提升系统性能。同时作为备份库提高可靠性。</p><h3 id=mysql高可用集群搭建>mysql高可用集群搭建</h3><h4 id=主mysql搭建>主mysql搭建</h4><h5 id=1docker创建主mysql服务>1.docker创建主mysql服务</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>docker run -d <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-p 3306:3306 <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-v /data/mysql/master0/conf:/etc/mysql/conf.d <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-v /data/mysql/master0/data:/var/lib/mysql <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-e <span class=nv>MYSQL_ROOT_PASSWORD</span><span class=o>=</span>root <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>--name mysql-master <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>mysql:8.0.29
+</span></span></code></pre></td></tr></table></div></div><h5 id=2修改主mysql配置文件>2.修改主mysql配置文件</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>vim /data/mysql/master0/conf/my.cnf
+</span></span></code></pre></td></tr></table></div></div><p>加入以下配置内容:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>[mysqld]
+</span></span><span class=line><span class=cl># 服务器唯一id，默认值1
+</span></span><span class=line><span class=cl>server-id=1
+</span></span><span class=line><span class=cl># 设置日志格式，默认值ROW
+</span></span><span class=line><span class=cl>binlog_format=STATEMENT
+</span></span><span class=line><span class=cl># 二进制日志名，默认binlog
+</span></span><span class=line><span class=cl># log-bin=binlog
+</span></span><span class=line><span class=cl># 设置需要复制的数据库，默认复制全部数据库
+</span></span><span class=line><span class=cl>#binlog-do-db=mytestdb
+</span></span><span class=line><span class=cl># 设置不需要复制的数据库
+</span></span><span class=line><span class=cl>#binlog-ignore-db=mysql
+</span></span><span class=line><span class=cl>#binlog-ignore-db=infomation_schema
+</span></span></code></pre></td></tr></table></div></div><p>重启mysql容器：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>docker restart mysql-master0
+</span></span></code></pre></td></tr></table></div></div><p><code>binlog格式说明：</code></p><ul><li><p>binlog_format=STATEMENT：日志记录的是主机数据库的<code>写指令</code>，性能高，但是now()之类的函数以及获取系统参数的操作会出现主从数据不同步的问题。</p></li><li><p>binlog_format=ROW（默认）：日志记录的是主机数据库的<code>写后的数据</code>，批量操作时性能较差，解决now()或者 user()或者 @@hostname 等操作在主从机器上不一致的问题。</p></li><li><p>binlog_format=MIXED：是以上两种level的混合使用，有函数用ROW，没函数用STATEMENT，但是无法识别系统变量</p></li></ul><h5 id=3进入mysql主服务器修改登录限制>3.进入mysql主服务器，修改登录限制</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl><span class=c1>#进入容器：env LANG=C.UTF-8 避免容器中显示中文乱码</span>
+</span></span><span class=line><span class=cl>docker <span class=nb>exec</span> -it mysql-master0 env <span class=nv>LANG</span><span class=o>=</span>C.UTF-8 /bin/bash
+</span></span><span class=line><span class=cl><span class=c1>#进入容器内的mysql命令行</span>
+</span></span><span class=line><span class=cl>mysql -uroot -p
+</span></span><span class=line><span class=cl><span class=c1>#修改默认密码校验方式</span>
+</span></span><span class=line><span class=cl>ALTER USER <span class=s1>&#39;root&#39;</span>@<span class=s1>&#39;%&#39;</span> IDENTIFIED WITH mysql_native_password BY <span class=s1>&#39;root&#39;</span><span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><h5 id=4-创建数据复制所用的slave用户>4. 创建数据复制所用的slave用户</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>CREATE USER <span class=s1>&#39;slave&#39;</span>@<span class=s1>&#39;%&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>-- 设置密码
+</span></span><span class=line><span class=cl>ALTER USER <span class=s1>&#39;slave&#39;</span>@<span class=s1>&#39;%&#39;</span> IDENTIFIED WITH mysql_native_password BY <span class=s1>&#39;root&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>-- 授予复制权限
+</span></span><span class=line><span class=cl>GRANT REPLICATION SLAVE ON *.* TO <span class=s1>&#39;slave&#39;</span>@<span class=s1>&#39;%&#39;</span><span class=p>;</span>
+</span></span><span class=line><span class=cl>-- 刷新权限
+</span></span><span class=line><span class=cl>FLUSH PRIVILEGES<span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><h5 id=5-查看主mysql状态>5. 查看主mysql状态</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>show master status<span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><p><img src=https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202401081716103.png loading=lazy alt=image.png></p><h4 id=从服务器搭建>从服务器搭建</h4><h5 id=1docker创建启动从服务器>1.docker创建启动从服务器</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>docker run -d <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-p 3307:3306 <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-v /data/mysql/slave0/conf:/etc/mysql/conf.d <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-v /data/mysql/slave0/data:/var/lib/mysql <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>-e <span class=nv>MYSQL_ROOT_PASSWORD</span><span class=o>=</span>root <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>--name mysql-slave1 <span class=se>\
+</span></span></span><span class=line><span class=cl><span class=se></span>mysql:8.0.29
+</span></span></code></pre></td></tr></table></div></div><h5 id=2-修改从服务器配置>2. 修改从服务器配置</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>vim /data/mysql/slave0/conf/my.cnf
+</span></span></code></pre></td></tr></table></div></div><p>修改配置如下：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback><span class=line><span class=cl>[mysqld]
+</span></span><span class=line><span class=cl># 服务器唯一id，每台服务器的id必须不同，如果配置其他从机，注意修改id
+</span></span><span class=line><span class=cl>server-id=2
+</span></span><span class=line><span class=cl># 中继日志名，默认xxxxxxxxxxxx-relay-bin
+</span></span><span class=line><span class=cl>#relay-log=relay-bin
+</span></span></code></pre></td></tr></table></div></div><p>重启容器：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>docker restart mysql-slave1
+</span></span></code></pre></td></tr></table></div></div><h5 id=3-修改登录方式>3. 修改登录方式</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl><span class=c1>#进入容器：</span>
+</span></span><span class=line><span class=cl>docker <span class=nb>exec</span> -it mysql-slave0 env <span class=nv>LANG</span><span class=o>=</span>C.UTF-8 /bin/bash
+</span></span><span class=line><span class=cl><span class=c1>#进入容器内的mysql命令行</span>
+</span></span><span class=line><span class=cl>mysql -uroot -p
+</span></span><span class=line><span class=cl><span class=c1>#修改默认密码校验方式</span>
+</span></span><span class=line><span class=cl>ALTER USER <span class=s1>&#39;root&#39;</span>@<span class=s1>&#39;%&#39;</span> IDENTIFIED WITH mysql_native_password BY <span class=s1>&#39;root&#39;</span><span class=p>;</span>
+</span></span></code></pre></td></tr></table></div></div><h5 id=4-配置主从关系>4. 配置主从关系</h5><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-sql data-lang=sql><span class=line><span class=cl><span class=n>CHANGE</span><span class=w> </span><span class=n>MASTER</span><span class=w> </span><span class=k>TO</span><span class=w> </span><span class=n>MASTER_HOST</span><span class=o>=</span><span class=s1>&#39;192.168.65.131&#39;</span><span class=p>,</span><span class=w> 
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=n>MASTER_USER</span><span class=o>=</span><span class=s1>&#39;slave&#39;</span><span class=p>,</span><span class=n>MASTER_PASSWORD</span><span class=o>=</span><span class=s1>&#39;root&#39;</span><span class=p>,</span><span class=w> </span><span class=n>MASTER_PORT</span><span class=o>=</span><span class=mi>3306</span><span class=p>,</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=n>MASTER_LOG_FILE</span><span class=o>=</span><span class=s1>&#39;binlog.000003&#39;</span><span class=p>,</span><span class=n>MASTER_LOG_POS</span><span class=o>=</span><span class=mi>1333</span><span class=p>;</span><span class=w> 
+</span></span></span></code></pre></td></tr></table></div></div><h4 id=slave启动主从同步>slave启动主从同步</h4><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-shell data-lang=shell><span class=line><span class=cl>START SLAVE<span class=p>;</span>
+</span></span><span class=line><span class=cl>-- 查看状态（不需要分号）
+</span></span><span class=line><span class=cl>SHOW SLAVE STATUS<span class=se>\G</span>
+</span></span></code></pre></td></tr></table></div></div><h3 id=springboot配置>SpringBoot配置</h3><p>pom.xml加入<code>sharding-jdbc</code>,<code>mybatis-plus</code>,<code>mysql驱动</code>等依赖</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span><span class=lnt>70
+</span><span class=lnt>71
+</span><span class=lnt>72
+</span><span class=lnt>73
+</span><span class=lnt>74
+</span><span class=lnt>75
+</span><span class=lnt>76
+</span><span class=lnt>77
+</span><span class=lnt>78
+</span><span class=lnt>79
+</span><span class=lnt>80
+</span><span class=lnt>81
+</span><span class=lnt>82
+</span><span class=lnt>83
+</span><span class=lnt>84
+</span><span class=lnt>85
+</span><span class=lnt>86
+</span><span class=lnt>87
+</span><span class=lnt>88
+</span><span class=lnt>89
+</span><span class=lnt>90
+</span><span class=lnt>91
+</span><span class=lnt>92
+</span><span class=lnt>93
+</span><span class=lnt>94
+</span><span class=lnt>95
+</span><span class=lnt>96
+</span><span class=lnt>97
+</span><span class=lnt>98
+</span><span class=lnt>99
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-xml data-lang=xml><span class=line><span class=cl><span class=cp>&lt;?xml version=&#34;1.0&#34; encoding=&#34;UTF-8&#34;?&gt;</span>
+</span></span><span class=line><span class=cl><span class=nt>&lt;project</span> <span class=na>xmlns=</span><span class=s>&#34;http://maven.apache.org/POM/4.0.0&#34;</span> <span class=na>xmlns:xsi=</span><span class=s>&#34;http://www.w3.org/2001/XMLSchema-instance&#34;</span>
+</span></span><span class=line><span class=cl>         <span class=na>xsi:schemaLocation=</span><span class=s>&#34;http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd&#34;</span><span class=nt>&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;modelVersion&gt;</span>4.0.0<span class=nt>&lt;/modelVersion&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;groupId&gt;</span>com.example<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;artifactId&gt;</span>sharding-jdbc-demo<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;version&gt;</span>0.0.1-SNAPSHOT<span class=nt>&lt;/version&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;name&gt;</span>sharding-jdbc-demo<span class=nt>&lt;/name&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;description&gt;</span>sharding-jdbc-demo<span class=nt>&lt;/description&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;properties&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;java.version&gt;</span>1.8<span class=nt>&lt;/java.version&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;project.build.sourceEncoding&gt;</span>UTF-8<span class=nt>&lt;/project.build.sourceEncoding&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;project.reporting.outputEncoding&gt;</span>UTF-8<span class=nt>&lt;/project.reporting.outputEncoding&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;spring-boot.version&gt;</span>2.3.12.RELEASE<span class=nt>&lt;/spring-boot.version&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;/properties&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;dependencies&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;dependency&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;groupId&gt;</span>org.springframework.boot<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;artifactId&gt;</span>spring-boot-starter-web<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/dependency&gt;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;dependency&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;groupId&gt;</span>mysql<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;artifactId&gt;</span>mysql-connector-java<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;scope&gt;</span>runtime<span class=nt>&lt;/scope&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/dependency&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;dependency&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;groupId&gt;</span>com.baomidou<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;artifactId&gt;</span>mybatis-plus-boot-starter<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;version&gt;</span>3.3.1<span class=nt>&lt;/version&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/dependency&gt;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;dependency&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;groupId&gt;</span>org.projectlombok<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;artifactId&gt;</span>lombok<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;optional&gt;</span>true<span class=nt>&lt;/optional&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/dependency&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;dependency&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;groupId&gt;</span>org.apache.shardingsphere<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;artifactId&gt;</span>shardingsphere-jdbc-core-spring-boot-starter<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;version&gt;</span>5.1.1<span class=nt>&lt;/version&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/dependency&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;dependency&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;groupId&gt;</span>org.springframework.boot<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;artifactId&gt;</span>spring-boot-starter-test<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;scope&gt;</span>test<span class=nt>&lt;/scope&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;exclusions&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;exclusion&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;groupId&gt;</span>org.junit.vintage<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;artifactId&gt;</span>junit-vintage-engine<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;/exclusion&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;/exclusions&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/dependency&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;/dependencies&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;dependencyManagement&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;dependencies&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;dependency&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;groupId&gt;</span>org.springframework.boot<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;artifactId&gt;</span>spring-boot-dependencies<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;version&gt;</span>${spring-boot.version}<span class=nt>&lt;/version&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;type&gt;</span>pom<span class=nt>&lt;/type&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;scope&gt;</span>import<span class=nt>&lt;/scope&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;/dependency&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/dependencies&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;/dependencyManagement&gt;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;build&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;plugins&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;plugin&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;groupId&gt;</span>org.apache.maven.plugins<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;artifactId&gt;</span>maven-compiler-plugin<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;version&gt;</span>3.8.1<span class=nt>&lt;/version&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;configuration&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;source&gt;</span>1.8<span class=nt>&lt;/source&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;target&gt;</span>1.8<span class=nt>&lt;/target&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;encoding&gt;</span>UTF-8<span class=nt>&lt;/encoding&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;/configuration&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;/plugin&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;plugin&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;groupId&gt;</span>org.springframework.boot<span class=nt>&lt;/groupId&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;artifactId&gt;</span>spring-boot-maven-plugin<span class=nt>&lt;/artifactId&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;version&gt;</span>${spring-boot.version}<span class=nt>&lt;/version&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;configuration&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;mainClass&gt;</span>com.example.shardingjdbcdemo.ShardingJdbcDemoApplication<span class=nt>&lt;/mainClass&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;skip&gt;</span>true<span class=nt>&lt;/skip&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;/configuration&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;executions&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;execution&gt;</span>
+</span></span><span class=line><span class=cl>                        <span class=nt>&lt;id&gt;</span>repackage<span class=nt>&lt;/id&gt;</span>
+</span></span><span class=line><span class=cl>                        <span class=nt>&lt;goals&gt;</span>
+</span></span><span class=line><span class=cl>                            <span class=nt>&lt;goal&gt;</span>repackage<span class=nt>&lt;/goal&gt;</span>
+</span></span><span class=line><span class=cl>                        <span class=nt>&lt;/goals&gt;</span>
+</span></span><span class=line><span class=cl>                    <span class=nt>&lt;/execution&gt;</span>
+</span></span><span class=line><span class=cl>                <span class=nt>&lt;/executions&gt;</span>
+</span></span><span class=line><span class=cl>            <span class=nt>&lt;/plugin&gt;</span>
+</span></span><span class=line><span class=cl>        <span class=nt>&lt;/plugins&gt;</span>
+</span></span><span class=line><span class=cl>    <span class=nt>&lt;/build&gt;</span>
+</span></span><span class=line><span class=cl>
+</span></span><span class=line><span class=cl><span class=nt>&lt;/project&gt;</span>
+</span></span></code></pre></td></tr></table></div></div><p>application.yaml主要涉及sharding-jdbc的配置：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span><span class=lnt>63
+</span><span class=lnt>64
+</span><span class=lnt>65
+</span><span class=lnt>66
+</span><span class=lnt>67
+</span><span class=lnt>68
+</span><span class=lnt>69
+</span><span class=lnt>70
+</span><span class=lnt>71
+</span><span class=lnt>72
+</span><span class=lnt>73
+</span><span class=lnt>74
+</span><span class=lnt>75
+</span><span class=lnt>76
+</span><span class=lnt>77
+</span><span class=lnt>78
+</span><span class=lnt>79
+</span><span class=lnt>80
+</span><span class=lnt>81
+</span><span class=lnt>82
+</span><span class=lnt>83
+</span><span class=lnt>84
+</span><span class=lnt>85
+</span><span class=lnt>86
+</span><span class=lnt>87
+</span><span class=lnt>88
+</span><span class=lnt>89
+</span><span class=lnt>90
+</span><span class=lnt>91
+</span><span class=lnt>92
+</span><span class=lnt>93
+</span><span class=lnt>94
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-yaml data-lang=yaml><span class=line><span class=cl><span class=nt>server</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>port</span><span class=p>:</span><span class=w> </span><span class=m>8080</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nt>spring</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>  </span><span class=nt>shardingsphere</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c># 内存模式</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>mode</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>Memory</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>datasource</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>names</span><span class=p>:</span><span class=w> </span><span class=l>master0,master1,slave0,slave1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>master0</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>com.zaxxer.hikari.HikariDataSource</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>driver-class-name</span><span class=p>:</span><span class=w> </span><span class=l>com.mysql.jdbc.Driver</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>jdbc-url</span><span class=p>:</span><span class=w> </span><span class=l>jdbc:mysql://192.168.65.131:3306/db_order</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>username</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>password</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>master1</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>com.zaxxer.hikari.HikariDataSource</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>driver-class-name</span><span class=p>:</span><span class=w> </span><span class=l>com.mysql.jdbc.Driver</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>jdbc-url</span><span class=p>:</span><span class=w> </span><span class=l>jdbc:mysql://192.168.65.131:3308/db_order</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>username</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>password</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>slave0</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>com.zaxxer.hikari.HikariDataSource</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>driver-class-name</span><span class=p>:</span><span class=w> </span><span class=l>com.mysql.jdbc.Driver</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>jdbc-url</span><span class=p>:</span><span class=w> </span><span class=l>jdbc:mysql://192.168.65.131:3307/db_order</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>username</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>password</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>slave1</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>com.zaxxer.hikari.HikariDataSource</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>driver-class-name</span><span class=p>:</span><span class=w> </span><span class=l>com.mysql.jdbc.Driver</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>jdbc-url</span><span class=p>:</span><span class=w> </span><span class=l>jdbc:mysql://192.168.65.131:3309/db_order</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>username</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>password</span><span class=p>:</span><span class=w> </span><span class=l>root</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=c>#sql日志输出</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>props</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>sql-show</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nt>rules</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=c># 读写分离配置</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>readwrite-splitting</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>data-sources</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>rwds0</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>Static</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>props</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=c>#写数据源名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>write-data-source-name</span><span class=p>:</span><span class=w> </span><span class=l>master0</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=c>#读数据源名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>read-data-source-names</span><span class=p>:</span><span class=w> </span><span class=l>slave0</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=c># 负载均衡算法名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>load-balancer-name</span><span class=p>:</span><span class=w> </span><span class=l>alg_round</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>rwds1</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>Static</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>props</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=c>#写数据源名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>write-data-source-name</span><span class=p>:</span><span class=w> </span><span class=l>master1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=c>#读数据源名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>read-data-source-names</span><span class=p>:</span><span class=w> </span><span class=l>slave1</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=c># 负载均衡算法名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>load-balancer-name</span><span class=p>:</span><span class=w> </span><span class=l>alg_round</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=c># 负载均衡算法类型</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>load-balancers</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>alg_round</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>RANDOM</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=c># 分片配置</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>      </span><span class=nt>sharding</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>tables</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>t_order</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>actual-data-nodes</span><span class=p>:</span><span class=w> </span><span class=l>rwds$-&gt;{0..1}.t_order$-&gt;{0..1}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=c># 分库策略</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>database-strategy</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>standard</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>                </span><span class=c># 分片列名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>                </span><span class=nt>sharding-column</span><span class=p>:</span><span class=w> </span><span class=l>user_id</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>                </span><span class=c>#分片算法名称</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>                </span><span class=nt>sharding-algorithm-name</span><span class=p>:</span><span class=w> </span><span class=l>alg_mod</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=c># 分表策略</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>table-strategy</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>standard</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>                </span><span class=nt>sharding-column</span><span class=p>:</span><span class=w> </span><span class=l>id</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>                </span><span class=nt>sharding-algorithm-name</span><span class=p>:</span><span class=w> </span><span class=l>alg_mod</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=c>#分布式序列策略配置</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>key-generate-strategy</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>column</span><span class=p>:</span><span class=w> </span><span class=l>id</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>key-generator-name</span><span class=p>:</span><span class=w> </span><span class=l>alg_snowflake</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>sharding-algorithms</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=c># 分片算法取余，按分片数2取余</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>alg_mod</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>mod</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>props</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>              </span><span class=nt>sharding-count</span><span class=p>:</span><span class=w> </span><span class=m>2</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=c>#主键生成策略</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=nt>key-generators</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>          </span><span class=nt>alg_snowflake</span><span class=p>:</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>            </span><span class=nt>type</span><span class=p>:</span><span class=w> </span><span class=l>SNOWFLAKE</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>测试代码：</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span></code></pre></td><td class=lntd><pre tabindex=0 class=chroma><code class=language-java data-lang=java><span class=line><span class=cl><span class=kn>package</span><span class=w> </span><span class=nn>com.example.shardingjdbcdemo</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kn>import</span><span class=w> </span><span class=nn>com.example.shardingjdbcdemo.entity.Order</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kn>import</span><span class=w> </span><span class=nn>com.example.shardingjdbcdemo.mapper.OrderMapper</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kn>import</span><span class=w> </span><span class=nn>org.junit.jupiter.api.Test</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kn>import</span><span class=w> </span><span class=nn>org.springframework.beans.factory.annotation.Autowired</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kn>import</span><span class=w> </span><span class=nn>org.springframework.boot.test.context.SpringBootTest</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kn>import</span><span class=w> </span><span class=nn>java.math.BigDecimal</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kn>import</span><span class=w> </span><span class=nn>java.util.List</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=cm>/**
+</span></span></span><span class=line><span class=cl><span class=cm> * @Author: 
+</span></span></span><span class=line><span class=cl><span class=cm> * @Date: 2024-01-09 17:55
+</span></span></span><span class=line><span class=cl><span class=cm> */</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=nd>@SpringBootTest</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=kd>public</span><span class=w> </span><span class=kd>class</span> <span class=nc>ShardingTest</span><span class=w> </span><span class=p>{</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nd>@Autowired</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=n>OrderMapper</span><span class=w> </span><span class=n>orderMapper</span><span class=p>;</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nd>@Test</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=kd>public</span><span class=w> </span><span class=kt>void</span><span class=w> </span><span class=nf>testInsertOrder</span><span class=p>(){</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=k>for</span><span class=p>(</span><span class=kt>int</span><span class=w> </span><span class=n>i</span><span class=w> </span><span class=o>=</span><span class=n>0</span><span class=p>;</span><span class=n>i</span><span class=o>&lt;</span><span class=n>5</span><span class=p>;</span><span class=n>i</span><span class=o>++</span><span class=p>){</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>Order</span><span class=w> </span><span class=n>order</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=k>new</span><span class=w> </span><span class=n>Order</span><span class=p>();</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>order</span><span class=p>.</span><span class=na>setOrderNo</span><span class=p>(</span><span class=s>&#34;sn20231011&#34;</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>order</span><span class=p>.</span><span class=na>setUserId</span><span class=p>(</span><span class=n>Long</span><span class=p>.</span><span class=na>valueOf</span><span class=p>(</span><span class=n>i</span><span class=o>+</span><span class=n>1</span><span class=p>));</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>order</span><span class=p>.</span><span class=na>setAmount</span><span class=p>(</span><span class=n>BigDecimal</span><span class=p>.</span><span class=na>valueOf</span><span class=p>(</span><span class=n>2</span><span class=p>.</span><span class=na>22</span><span class=p>));</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>orderMapper</span><span class=p>.</span><span class=na>insert</span><span class=p>(</span><span class=n>order</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=nd>@Test</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=kd>public</span><span class=w> </span><span class=kt>void</span><span class=w> </span><span class=nf>query</span><span class=p>(){</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>List</span><span class=o>&lt;</span><span class=n>Order</span><span class=o>&gt;</span><span class=w> </span><span class=n>orders</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>orderMapper</span><span class=p>.</span><span class=na>selectList</span><span class=p>(</span><span class=kc>null</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>List</span><span class=o>&lt;</span><span class=n>Order</span><span class=o>&gt;</span><span class=w> </span><span class=n>orders1</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>orderMapper</span><span class=p>.</span><span class=na>selectList</span><span class=p>(</span><span class=kc>null</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>List</span><span class=o>&lt;</span><span class=n>Order</span><span class=o>&gt;</span><span class=w> </span><span class=n>orders2</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>orderMapper</span><span class=p>.</span><span class=na>selectList</span><span class=p>(</span><span class=kc>null</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>        </span><span class=n>List</span><span class=o>&lt;</span><span class=n>Order</span><span class=o>&gt;</span><span class=w> </span><span class=n>orders3</span><span class=w> </span><span class=o>=</span><span class=w> </span><span class=n>orderMapper</span><span class=p>.</span><span class=na>selectList</span><span class=p>(</span><span class=kc>null</span><span class=p>);</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w>    </span><span class=p>}</span><span class=w>
+</span></span></span><span class=line><span class=cl><span class=w></span><span class=p>}</span><span class=w>
+</span></span></span></code></pre></td></tr></table></div></div><p>可从插入数据查看到对应主从库及分片数据的存储，查询也可根据控制台打印的sql，看到数据的查询走的从库了，分担了主库的压力。</p><p><img src=https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202401092159789.png loading=lazy alt=image-20240109215925715></p><p>当然，你还可以根据上面的架构，改造成一主多从，实现水平分库分表，多从库读的能力。</p></section><footer class=article-footer><section class=article-tags><a href=/tags/java/>Java</a>
+<a href=/tags/sharding-jdbc/>Sharding-Jdbc</a></section><section class=article-copyright><svg class="icon icon-tabler icon-tabler-copyright" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentcolor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z"/><circle cx="12" cy="12" r="9"/><path d="M14.5 9a3.5 4 0 100 6"/></svg>
+<span>转载需要保留原始链接，未经明确许可，禁止商业使用。<a class=link href=https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh target=_blank rel=noopener>CC BY-NC-SA 4.0</a></span></section></footer></article><aside class=related-content--wrapper><h2 class=section-title>相关文章</h2><div class=related-content><div class="flex article-list--tile"><article class=has-image><a href=/p/sharding-jdbc%E5%AE%9E%E7%8E%B0%E4%B8%80%E8%87%B4%E6%80%A7%E5%93%88%E5%B8%8C%E5%88%86%E7%89%87/><div class=article-image><img src=/post/java/sharding-jdbc/pexels-google-deepmind-17483874.jpg loading=lazy data-key data-hash=/post/java/sharding-jdbc/pexels-google-deepmind-17483874.jpg></div><div class=article-details><h2 class=article-title>sharding-jdbc实现一致性哈希分片</h2></div></a></article></div></div></aside><div class=disqus-container><div id=disqus_thread></div><script>window.disqus_config=function(){},function(){if(["localhost","127.0.0.1"].indexOf(window.location.hostname)!=-1){document.getElementById("disqus_thread").innerHTML="Disqus comments not available by default when the website is previewed locally.";return}var t=document,e=t.createElement("script");e.async=!0,e.src="//sailingsky.disqus.com/embed.js",e.setAttribute("data-timestamp",+new Date),(t.head||t.body).appendChild(e)}()</script><noscript>Please enable JavaScript to view the <a href=https://disqus.com/?ref_noscript>comments powered by Disqus.</a></noscript><a href=https://disqus.com class=dsq-brlink>comments powered by <span class=logo-disqus>Disqus</span></a></div><style>.disqus-container{background-color:var(--card-background);border-radius:var(--card-border-radius);box-shadow:var(--shadow-l1);padding:var(--card-padding)}</style><script>window.addEventListener("onColorSchemeChange",e=>{typeof DISQUS=="object"&&DISQUS.reset({reload:!0})})</script><footer class=site-footer><section class=copyright>&copy;
+2023 -
+2025 码文</section><section class=powerby>使用 <a href=https://gohugo.io/ target=_blank rel=noopener>Hugo</a> 构建<br>主题 <b><a href=https://github.com/CaiJimmy/hugo-theme-stack target=_blank rel=noopener data-version=3.29.0>Stack</a></b> 由 <a href=https://jimmycai.com target=_blank rel=noopener>Jimmy</a> 设计</section></footer><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js integrity="sha256-ePwmChbbvXbsO02lbM3HoHbSHTHFAeChekF1xKJdleo=" crossorigin=anonymous defer></script><script src=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js integrity="sha256-UKkzOn/w1mBxRmLLGrSeyB4e1xbrp4xylgAWb3M42pU=" crossorigin=anonymous defer></script><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/default-skin/default-skin.min.css crossorigin=anonymous><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.css crossorigin=anonymous></main></div><script src=https://cdn.jsdelivr.net/npm/node-vibrant@3.1.6/dist/vibrant.min.js integrity="sha256-awcR2jno4kI5X0zL8ex0vi2z+KMkF24hUW8WePSA9HM=" crossorigin=anonymous></script><script type=text/javascript src=/ts/main.1e9a3bafd846ced4c345d084b355fb8c7bae75701c338f8a1f8a82c780137826.js defer></script><script>(function(){const e=document.createElement("link");e.href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap",e.type="text/css",e.rel="stylesheet",document.head.appendChild(e)})()</script></body></html>

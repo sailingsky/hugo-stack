@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>建站 on 码文</title><link>https://sailingsky.github.io/tags/%E5%BB%BA%E7%AB%99/</link><description>Recent content in 建站 on 码文</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Sun, 17 Sep 2023 18:07:30 +0800</lastBuildDate><atom:link href="https://sailingsky.github.io/tags/%E5%BB%BA%E7%AB%99/index.xml" rel="self" type="application/rss+xml"/><item><title>Build Blog</title><link>https://sailingsky.github.io/p/build-blog/</link><pubDate>Sun, 17 Sep 2023 18:07:30 +0800</pubDate><guid>https://sailingsky.github.io/p/build-blog/</guid><description>&lt;img src="https://sailingsky.github.io/p/build-blog/cover.jpg" alt="Featured image of post Build Blog" />&lt;h3 id="下载安装hugo">下载安装hugo
+&lt;/h3>&lt;ul>
+&lt;li>去github上下载对应系统的安装包：&lt;a class="link" href="https://github.com/gohugoio/hugo/releases/tag/v0.118.2" target="_blank" rel="noopener"
+>hugo安装包&lt;/a>。由于我是windows系统，那就下载windows版本。&lt;/li>
+&lt;li>下载完成后，解压将安装文件放至到某个目录。修改环境变量path,添加刚才hugo文件所在路径。&lt;/li>
+&lt;li>命令行验证是否本地安装成功：
+&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202309170952606.png"
+loading="lazy"
+alt="image.png"
+>&lt;/li>
+&lt;/ul>
+&lt;h3 id="创建github仓库">创建Github仓库
+&lt;/h3>&lt;h4 id="创建博客源文件内容仓库">创建博客源文件内容仓库：
+&lt;/h4>&lt;p>名字随意取
+&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202309170955055.png"
+loading="lazy"
+alt="image.png"
+>&lt;/p>
+&lt;h4 id="创建github-pages仓库">创建GitHub Pages仓库：
+&lt;/h4>&lt;p>仓库名称必须使用&lt;code>&amp;lt;username.github.io&amp;gt;&lt;/code>的格式，&lt;code>username&lt;/code>为GitHub的用户名:
+&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202309171000912.png"
+loading="lazy"
+alt="image.png"
+>&lt;/p>
+&lt;p>~~### 将博客源文件内容仓库拉到本地：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-shell" data-lang="shell">&lt;span class="line">&lt;span class="cl"> git clone https://github.com/username/blog.git
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>~~### 用hugo创建网站：&lt;/p>
+&lt;ul>
+&lt;li>进入刚下的本地仓库文件夹，如&lt;code>blog&lt;/code>&lt;/li>
+&lt;li>使用命令&lt;code>hugo new site 网站名称&lt;/code>创建网站。&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">&lt;span class="nb">cd&lt;/span> blog
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">hugo new site bytecode-blog
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202309171011884.png"
+loading="lazy"
+alt="image.png"
+>&lt;/p>
+&lt;p>~~### 安装和配置hugo主题&lt;/p>
+&lt;p>进入到之前的&lt;code>myblog&lt;/code>目录，根据选择的hugo主题安装文件，我这里选择的是&lt;code>stack&lt;/code>主题：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-shell" data-lang="shell">&lt;span class="line">&lt;span class="cl">git submodule add https://github.com/CaiJimmy/hugo-theme-stack/ themes/hugo-theme-stack
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>~~### 配置主题&lt;/p>
+&lt;p>将&lt;code>themes\hugo-theme-stack\exampleSite&lt;/code>里面的&lt;code>content&lt;/code>文件以及&lt;code>config.yaml&lt;/code>拷贝覆盖到根目录下&lt;/p>
+&lt;h3 id="更简单的作法前面删除线的步骤皆可不用">更简单的作法，前面删除线的步骤皆可不用！
+&lt;/h3>&lt;ul>
+&lt;li>如果确定使用&lt;code>stack&lt;/code>主题，直接去GitHub下载&lt;a class="link" href="https://github.com/CaiJimmy/hugo-theme-stack-starter" target="_blank" rel="noopener"
+>stack-starter&lt;/a>工程。&lt;/li>
+&lt;li>修改&lt;code>config\_default&lt;/code>目录下的&lt;code>config.toml&lt;/code>文件，将&lt;code>baseurl&lt;/code>修改为：&lt;code>https://&amp;lt;github-username&amp;gt;.github.io/&lt;/code>&lt;/li>
+&lt;li>运行&lt;code>hugo server&lt;/code>命令，即可在本地看到效果。&lt;/li>
+&lt;li>运行&lt;code>hugo&lt;/code>命令，将生成对应的静态文件。在&lt;code>public&lt;/code>文件夹下。&lt;/li>
+&lt;li>进入到&lt;code>public&lt;/code>文件夹，执行以下命令,将静态文件上传到Github：&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl"> git init -b main
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> git remote add origin git@github.com:&amp;lt;github-username&amp;gt;/&amp;lt;github-username&amp;gt;.github.io.git
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> git pull --rebase origin main
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> git add .
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> git commit -m &lt;span class="s1">&amp;#39;message&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> git push origin main
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="查看效果">查看效果：
+&lt;/h3>&lt;p>接着你就可以访问&lt;code>https://&amp;lt;github-username&amp;gt;.github.io&lt;/code>查看效果了：
+&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202309171759286.png"
+loading="lazy"
+alt="image.png"
+>&lt;/p></description></item></channel></rss>

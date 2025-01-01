@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>AI on 码文</title><link>https://sailingsky.github.io/categories/ai/</link><description>Recent content in AI on 码文</description><generator>Hugo -- gohugo.io</generator><language>zh-cn</language><lastBuildDate>Thu, 22 Feb 2024 15:44:27 +0800</lastBuildDate><atom:link href="https://sailingsky.github.io/categories/ai/index.xml" rel="self" type="application/rss+xml"/><item><title>Whisper语音转文字</title><link>https://sailingsky.github.io/p/whisper%E8%AF%AD%E9%9F%B3%E8%BD%AC%E6%96%87%E5%AD%97/</link><pubDate>Thu, 22 Feb 2024 15:44:27 +0800</pubDate><guid>https://sailingsky.github.io/p/whisper%E8%AF%AD%E9%9F%B3%E8%BD%AC%E6%96%87%E5%AD%97/</guid><description>&lt;img src="https://sailingsky.github.io/post/ai/igor-omilaev-eGGFZ5X2LnA-unsplash.jpg" alt="Featured image of post Whisper语音转文字" />&lt;p>最近有个需求，想把语音转成文字，网上搜了搜，能用的免费的没多少，某飞的居然要收88大洋，太贵了，买不起根本买不起。后面寻着了个免费的方法，采用whisper进行语音文字转换。&lt;/p>
+&lt;h4 id="薅个云主机">薅个云主机
+&lt;/h4>&lt;p>进入google云盘(&lt;a class="link" href="https://drive.google.com/drive/home%29" target="_blank" rel="noopener"
+>https://drive.google.com/drive/home)&lt;/a>,新建-更多-Google Colaboratory.&lt;/p>
+&lt;p>&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202402221552821.png"
+loading="lazy"
+alt="image-20240222155213774"
+>&lt;/p>
+&lt;p>接着修改代码运行时类型，更改相应配置：&lt;/p>
+&lt;p>&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202402221555405.png"
+loading="lazy"
+alt="image-20240222155511367"
+>&lt;/p>
+&lt;p>这里选择的运行时：Python3 ,硬件加速器 T4 GPU&lt;/p>
+&lt;p>&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202402221555542.png"
+loading="lazy"
+alt="image-20240222155552497"
+>&lt;/p>
+&lt;p>然后保存之，右上角连接到对应的主机。&lt;/p>
+&lt;p>&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202402221558994.png"
+loading="lazy"
+alt="image-20240222155817964"
+>&lt;/p>
+&lt;h4 id="安装whisper及配套组件">安装whisper及配套组件
+&lt;/h4>&lt;ul>
+&lt;li>
+&lt;p>在代码栏中输入以下内容，并运行&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-python" data-lang="python">&lt;span class="line">&lt;span class="cl">&lt;span class="err">!&lt;/span>&lt;span class="n">pip&lt;/span> &lt;span class="n">install&lt;/span> &lt;span class="n">git&lt;/span>&lt;span class="o">+&lt;/span>&lt;span class="n">https&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="o">//&lt;/span>&lt;span class="n">github&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">com&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">openai&lt;/span>&lt;span class="o">/&lt;/span>&lt;span class="n">whisper&lt;/span>&lt;span class="o">.&lt;/span>&lt;span class="n">git&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">!&lt;/span>&lt;span class="n">sudo&lt;/span> &lt;span class="n">apt&lt;/span> &lt;span class="n">update&lt;/span> &lt;span class="o">&amp;amp;&amp;amp;&lt;/span> &lt;span class="n">sudo&lt;/span> &lt;span class="n">apt&lt;/span> &lt;span class="n">install&lt;/span> &lt;span class="n">ffmpeg&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202402221600186.png"
+loading="lazy"
+alt="image-20240222160037099"
+>&lt;/p>
+&lt;p>上传要转文字的音频或视频文件：&lt;/p>
+&lt;p>&lt;img src="https://wechapter.oss-cn-hangzhou.aliyuncs.com/wechat/image202402221601822.png"
+loading="lazy"
+alt="image-20240222160152788"
+>&lt;/p>
+&lt;p>接着执行转换命令：&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-shell" data-lang="shell">&lt;span class="line">&lt;span class="cl">!whisper &lt;span class="s2">&amp;#34;meeting_01.mp4&amp;#34;&lt;/span> --model large-v3
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>根据文件大小，会等待一段时间。最终成功后会在文件夹下生成转换出来的 srt文件，txt文件，json文件等，识别率也还不错。&lt;/p></description></item></channel></rss>
